@@ -89,3 +89,31 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+uint64 sys_hello(void)   // hello syscall defination
+{
+  int n;
+  argint(0,&n);
+  print_hello(n);
+  return 0;
+}
+
+
+uint64
+sys_sysinfo(void)
+{
+    int param;
+   argint(0,&param);
+
+    switch (param) {
+        case 0:
+            return count_active_processes();
+        case 1:
+            return get_syscall_count();
+        case 2:
+            return count_free_pages(); // Ensure this function returns a uint64/int
+        default:
+            return -1;
+    }
+}

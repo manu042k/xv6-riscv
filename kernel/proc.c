@@ -681,3 +681,38 @@ procdump(void)
     printf("\n");
   }
 }
+
+
+
+void print_hello(int n)
+{
+  printf("Hello from the kernal space %d\n",n);
+} 
+
+
+
+
+// Forward declaration for struct run.
+
+// Declare kmem (the free memory manager).
+
+
+int count_active_processes(void) {
+  int count = 0;
+  
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state != UNUSED)
+     { count ++;}
+
+  }
+  return count;
+}
+int get_syscall_count()
+{
+  extern int total_syscalls;
+  return total_syscalls;
+}
+
+
