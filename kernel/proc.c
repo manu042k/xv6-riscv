@@ -690,13 +690,6 @@ void print_hello(int n)
 } 
 
 
-
-
-// Forward declaration for struct run.
-
-// Declare kmem (the free memory manager).
-
-
 int count_active_processes(void) {
   int count = 0;
   
@@ -709,10 +702,19 @@ int count_active_processes(void) {
   }
   return count;
 }
-int get_syscall_count()
+
+
+
+int procinfo(struct pinfo *in)
 {
-  extern int total_syscalls;
-  return total_syscalls;
+  if(!in)
+    return -1;
+  
+  struct proc *p = myproc();
+  copyout(p->pagetable, (uint64)&in->ppid,(char *)&p->parent->pid, sizeof(p->pid));
+  int N_pages = p->sz / PGSIZE;
+
+  copyout(p->pagetable,(uint64)&in->syscall_count,(char *)&p->syscall_count, sizeof(int));
+  copyout(p->pagetable,(uint64)&in->page_usage,(char *)&N_pages, sizeof(int));
+  return 0;
 }
-
-

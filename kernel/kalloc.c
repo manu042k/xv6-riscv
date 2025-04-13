@@ -81,6 +81,9 @@ kalloc(void)
   return (void*)r;
 }
 
+
+
+
 int count_free_pages()
 { 
 
