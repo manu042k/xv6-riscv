@@ -9,4 +9,4 @@ int main(int argc, char *argv[])
     printf("Say hello to kernel %d\n",n);
     hello(n);
     exit(0);
-}
+} 

@@ -185,11 +185,15 @@ void            virtio_disk_init(void);
 void            virtio_disk_rw(struct buf *, int);
 void            virtio_disk_intr(void);
 
+
+/******************************************/
 void            print_hello(int); //hello
 
 int             count_active_processes(void);
 int             get_syscall_count(void);
 int             count_free_pages(void);
+/******************************************/
+
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

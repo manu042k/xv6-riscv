@@ -83,6 +83,7 @@ kalloc(void)
 
 
 
+/******************************************/
 
 int count_free_pages()
 { 
@@ -100,3 +101,8 @@ int count_free_pages()
     release(&kmem.lock);
     return free_count;
   }
+
+
+
+/******************************************/
+ 

@@ -102,9 +102,13 @@ extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 
+/******************************************/
+
 extern uint64 sys_hello(void); //hello: declaraion 
 extern uint64 sys_sysinfo(void);
 extern uint64 sys_procinfo(void);
+
+/******************************************/
 
 
 // An array mapping syscall numbers from syscall.h
@@ -132,12 +136,19 @@ static uint64 (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 
+/******************************************/
+
 [SYS_hello]   sys_hello,  //hello: syscall entry
 [SYS_sysinfo] sys_sysinfo,
 [SYS_procinfo] sys_procinfo,
+
+/******************************************/
+
 };
 
-static int total_syscalls = 0;
+ 
+
+static int total_syscalls = 0;            // added for syscall count
 
 void
 syscall(void)
@@ -151,9 +162,11 @@ syscall(void)
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
-    if(num != SYS_sysinfo){
+
+    if(num != SYS_sysinfo){                    // added for syscall count
       total_syscalls ++;
     }
+
     p->trapframe->a0 = syscalls[num]();
   } else {
     printf("%d %s: unknown sys call %d\n",
@@ -163,7 +176,13 @@ syscall(void)
 }
 
 
+/******************************************/
+
+
 int get_syscall_count()
 {
   return total_syscalls;
-}
+} 
+
+
+/******************************************/

@@ -682,6 +682,7 @@ procdump(void)
   }
 }
 
+/******************************************/
 
 
 void print_hello(int n)
@@ -703,7 +704,7 @@ int count_active_processes(void) {
   return count;
 }
 
-
+ 
 
 int procinfo(struct pinfo *in)
 {
@@ -718,3 +719,7 @@ int procinfo(struct pinfo *in)
   copyout(p->pagetable,(uint64)&in->page_usage,(char *)&N_pages, sizeof(int));
   return 0;
 }
+
+
+
+/******************************************/

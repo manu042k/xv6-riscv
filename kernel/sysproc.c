@@ -91,6 +91,9 @@ sys_uptime(void)
 }
 
 
+/******************************************/
+
+
 uint64 sys_hello(void)   // hello syscall defination
 {
   int n;
@@ -98,7 +101,6 @@ uint64 sys_hello(void)   // hello syscall defination
   print_hello(n);
   return 0;
 }
-
 
 uint64
 sys_sysinfo(void)
@@ -112,13 +114,12 @@ sys_sysinfo(void)
         case 1:
             return get_syscall_count();
         case 2:
-            return count_free_pages(); // Ensure this function returns a uint64/int
+            return count_free_pages(); 
         default:
             return -1;
     }
 }
-
-
+  
 uint64 sys_procinfo(struct pinfo *in)
 {
     argaddr(0,(void*) &in);
@@ -132,4 +133,6 @@ uint64 sys_procinfo(struct pinfo *in)
   copyout(p->pagetable,(uint64)&in->syscall_count,(char *)&p->syscall_count, sizeof(int));
   copyout(p->pagetable,(uint64)&in->page_usage,(char *)&N_pages, sizeof(int));
   return 0;
-}
+} 
+
+/******************************************/
