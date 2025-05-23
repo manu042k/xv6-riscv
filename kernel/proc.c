@@ -18,6 +18,12 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
+#define DEFAULT_TICKETS 10000           
+#define MAX_INT 2147483647
+#ifdef STRIDE
+#define STRIDE_CONST 10000   
+#endif
+
 extern char trampoline[]; // trampoline.S
 
 // helps ensure that wakeups of wait()ing
@@ -124,6 +130,15 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+
+  // To reset count for each process
+  p->ticks = 0;       //initializing ticks to 0 for each process
+  p->tickets = DEFAULT_TICKETS; //initializing default tickets(10000) to each process
+  #ifdef STRIDE
+  p->stride = STRIDE_CONST / p->tickets;  //initializing stride of the process
+  p->pass = p->stride;                       //initializing pass of the process
+  #endif
+  
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -434,6 +449,144 @@ wait(uint64 addr)
   }
 }
 
+//Psuedo random number generator
+// static unsigned int seed = 1;
+// void seedRandomiser(int newSeed) {
+//   seed = (unsigned)newSeed & 0x7fffffffU;
+// }
+
+// int randomiser(void) {
+//   seed = (seed * 1103515245U + 12345U) & 0x7fffffffU;
+//   return seed;
+// }
+// pseudo random generator (https://stackoverflow.com/a/7603688) 
+unsigned short lfsr = 0xACE1u; 
+unsigned short bit; 
+ 
+unsigned short rand() 
+{ 
+  bit = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5)) & 1; 
+  return lfsr = (lfsr >> 1) | (bit << 15); 
+} 
+
+
+// This fucntoin returns total_ticket count of all processes.
+int TotalTickets(void) {
+  struct proc * process;
+  int total_tickets = 0;
+
+  for (process = proc; process < &proc[NPROC]; process++) { //loop through all the processes
+    acquire(&process->lock);
+    if (process->state == RUNNABLE) {       //if the state of the process is runnable 
+      total_tickets += process->tickets;    // we increase the total_ticket count by the ticket of that process
+    }
+    release(&process->lock);
+  }
+  return total_tickets;
+}
+ 
+//LOTTERY SCHEDULER IMPLIMENTATION
+
+#ifdef LOTTERY  //directive to run this block of code for LOTTERY scheduler
+
+void
+scheduler(void)
+{
+  printf("Lottery Scheduler Invoked\n");
+  struct proc *p, *q;
+  struct cpu *c = mycpu();
+  int winner_decided;   //variable to check if winner is decided or not
+  int lucky;    //variable to store the winning lottery ticket number
+  int ticket_count; //current ticket count
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+    winner_decided = 0;
+    q = proc;
+    // Pick the winning lottery number
+    lucky = rand() % TotalTickets();
+    ticket_count = 0;
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        if (p->tickets == 0)
+          p->tickets = DEFAULT_TICKETS;
+        ticket_count += p->tickets;
+        // The process gets scheduled only if its ticket is in the winning range.
+        if (ticket_count >= lucky && !winner_decided) {
+          q = p;
+          winner_decided = 1;
+        }
+      } else {
+        p->tickets = 0;
+      }
+      release(&p->lock);
+    }
+    //Winning process gets the cpu
+    p = q;
+    acquire(&p->lock);
+    // Switch to chosen process.  It is the process's job
+    // to release its lock and then reacquire it
+    // before jumping back to us.
+    p->state = RUNNING;
+    c->proc = p;
+    swtch(&c->context, &p->context);
+    p->ticks++;
+    // Process is done running for now.
+    // It should have changed its p->state before coming back.
+    c->proc = 0;
+    release(&p->lock);
+  }
+}
+#elif STRIDE //pre processor directive to run this block of code for STRIDE scheduler
+// Stride Scheduler Implementation
+void
+scheduler(void)
+{
+  printf("Stride Scheduling Invoked\n");
+  struct proc *p;
+  struct proc *min_pass_p;
+  struct cpu *c = mycpu();
+  int min = MAX_INT;
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+    min_pass_p = proc;
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        if(p->pass < min) {
+          min = p->pass;
+          min_pass_p = p;
+        }
+      }
+      release(&p->lock);
+    }
+
+    p = min_pass_p;
+    acquire(&p->lock);
+    // Switch to chosen process.  It is the process's job
+    // to release its lock and then reacquire it
+    // before jumping back to us.
+    p->state = RUNNING;
+    c->proc = p;
+    swtch(&c->context, &p->context);
+    p->ticks++;
+    // Process is done running for now.
+    // It should have changed its p->state before coming back.
+    p->pass += p->stride;
+    min = MAX_INT;
+    c->proc = 0;
+    release(&p->lock);
+    }
+}
+#else
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -460,6 +613,7 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        p->ticks++;
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -470,7 +624,7 @@ scheduler(void)
     }
   }
 }
-
+#endif
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -677,7 +831,72 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
+    #ifdef LOTTERY
+      printf("%d %s %s tickets: %d scheduled_times: %d", p->pid, state, p->name, p->tickets, p->ticks);
+      printf("\n");
+    #elif STRIDE
+      printf("%d %s %s tickets: %d scheduled_times: %d pass: %d stride: %d", p->pid, state, p->name, p->tickets, p->ticks, p->pass, p->stride);
+      printf("\n");
+    #else
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
+    #endif
+  }
+}
+
+//Returns count of number of processes currently in the system.
+int
+total_process_count(void)
+{
+  static char *states[] = {
+  [SLEEPING]  "sleep ",
+  [RUNNABLE]  "runble",
+  [RUNNING]   "run   ",
+  [ZOMBIE]    "zombie"
+  };
+  struct proc *p;
+  uint64 count = 0;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state == UNUSED)
+      continue;
+    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+      count++;
+  }
+  return count;
+}
+
+// Print a string that is appended by a number
+// given by the user.
+void salutation(int n)
+{
+  printf("Salutations number %d! \n", n);
+}
+
+// Print the total count of system calls made so far by the system, 
+// apart from the latest call.
+
+
+// Function to set the tickets to each process if called
+int set_tickets_to_proc(int n) {
+  struct proc * p = myproc();
+  p->tickets = n;
+  #ifdef STRIDE
+  p->stride = STRIDE_CONST / p->tickets;
+  p->pass = p->stride;
+  #endif
+  return 0;
+}
+
+// Print the number of times the process was scheduled.
+void print_sched_statistics(void) {
+  struct proc * p;
+  for (p = proc; p < &proc[NPROC]; p++) {   //loop throgh all the processes
+      acquire(&p->lock);
+      if (p->state != UNUSED) {
+        //printf function to print pid,name,tickets and ticks of the process 
+        printf("%d(%s): tickets: %d, ticks: %d\n",p->pid, p->name,p->tickets, p->ticks);
+      }
+      release(&p->lock);
   }
 }

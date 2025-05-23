@@ -89,3 +89,22 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//syscall sched_tickets to set the caller process’s ticket value to the given parameter
+//return value of this funciton is int (0)
+uint64
+sys_sched_tickets(void)
+{
+  int n;
+  argint(0,&n);         //n is the inout parameter from user level, here it is number of tickets for that process
+  return set_tickets_to_proc(n);
+}
+
+//syscall sched_statistics to print pid, name, tickets and ticks of the process
+//this function returns int 0
+uint64
+sys_sched_statistics(void)
+{
+  print_sched_statistics();
+  return 0;
+}

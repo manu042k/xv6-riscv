@@ -187,3 +187,9 @@ void            virtio_disk_intr(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+
+int            set_tickets_to_proc(int);           // function declaration of set tickets to process
+void            print_sched_statistics(void);      // function declaration of sched_statistics
+unsigned short  rand(void);                        // function declaration of ranndom integer returning fucntion
+

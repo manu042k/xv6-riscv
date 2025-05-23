@@ -36,3 +36,5 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+entry("sched_tickets");                #entrying sched_tickets as a system call
+entry("sched_statistics");             #entrying sched_statistics as a systam call

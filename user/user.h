@@ -22,6 +22,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int sched_tickets(int);             //declaring system call sched_tickets
+int sched_statistics(void);         //declaring system call sched_statistics
 
 // ulib.c
 int stat(const char*, struct stat*);
