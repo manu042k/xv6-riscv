@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "stddef.h"
 
 uint64
 sys_exit(void)
@@ -89,3 +90,12 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//syscall sys_clone to ceate a child thread
+uint64
+sys_clone(void)
+{
+  uint64 temp;
+  argaddr(0,&temp);
+  return make_clone((void*)temp);   //returns PID of the child to the parent
+}                                   //returns 0 to the child thread
